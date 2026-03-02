@@ -2,6 +2,7 @@ const express = require('express')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const User = require('../models/User')
+const { auth } = require('../middleware/auth')
 
 const router = express.Router()
 
@@ -72,6 +73,51 @@ router.post('/login', async (req, res) => {
         email: user.email,
         role: user.role,
       },
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Lỗi server' })
+  }
+})
+
+// Lấy thông tin user hiện tại (profile)
+router.get('/me', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('-passwordHash')
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy user' })
+    }
+    res.json({
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Lỗi server' })
+  }
+})
+
+// Cập nhật profile (fullName, email nếu đổi)
+router.put('/me', auth, async (req, res) => {
+  try {
+    const { fullName, email } = req.body
+    const update = {}
+    if (fullName != null) update.fullName = fullName
+    if (email != null) update.email = email
+    const user = await User.findByIdAndUpdate(req.userId, update, {
+      new: true,
+      runValidators: true,
+    }).select('-passwordHash')
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy user' })
+    }
+    res.json({
+      id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
     })
   } catch (error) {
     console.error(error)
