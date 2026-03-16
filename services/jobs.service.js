@@ -6,7 +6,13 @@ const { JOB_STATUSES } = require('../constants/domain')
 const { notFound } = require('../utils/httpError')
 
 async function listJobs(query) {
-  const [items, total] = await jobRepository.listPublicJobs(query)
+  const parsed = { ...query }
+  if (typeof parsed.tags === 'string' && parsed.tags.trim()) {
+    parsed.tags = parsed.tags.split(',').map((t) => t.trim()).filter(Boolean)
+  } else if (!Array.isArray(parsed.tags)) {
+    parsed.tags = []
+  }
+  const [items, total] = await jobRepository.listPublicJobs(parsed)
   return { items, total }
 }
 
@@ -35,6 +41,7 @@ async function createJob(recruiterId, payload) {
     salaryMax: payload.salaryMax ?? null,
     deadline: payload.deadline ? new Date(payload.deadline) : null,
     status: payload.status || JOB_STATUSES.OPEN,
+    tags: Array.isArray(payload.tags) ? payload.tags : [],
   })
 }
 
@@ -55,6 +62,7 @@ async function updateJob(jobId, recruiterId, payload) {
     'salaryMax',
     'deadline',
     'status',
+    'tags',
   ]
 
   allowed.forEach((key) => {

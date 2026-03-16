@@ -13,6 +13,7 @@ const jobSchema = new mongoose.Schema(
     experienceLevel: { type: String, default: '' },
     currency: { type: String, default: 'VND' },
     skills: [{ type: String }],
+    tags: [{ type: String }],
     experienceYears: { type: Number, default: null },
     salaryMin: { type: Number, default: null },
     salaryMax: { type: Number, default: null },
@@ -26,5 +27,6 @@ const jobSchema = new mongoose.Schema(
 jobSchema.index({ status: 1, createdAt: -1 })
 jobSchema.index({ recruiterId: 1, createdAt: -1 })
 jobSchema.index({ title: 'text', company: 'text', description: 'text' })
+jobSchema.index({ tags: 1 })
 
 module.exports = mongoose.model('Job', jobSchema)

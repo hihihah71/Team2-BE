@@ -1,7 +1,7 @@
 const Job = require('../models/Job')
 const { JOB_STATUSES } = require('../constants/domain')
 
-function listPublicJobs({ page, limit, search, status }) {
+function listPublicJobs({ page, limit, search, status, tags }) {
   const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10) || 10))
   const skip = (Math.max(1, parseInt(page, 10) || 1) - 1) * limitNum
   const filter = { status: status || JOB_STATUSES.OPEN }
@@ -13,6 +13,10 @@ function listPublicJobs({ page, limit, search, status }) {
       { company: new RegExp(escapedSearch, 'i') },
       { description: new RegExp(escapedSearch, 'i') },
     ]
+  }
+
+  if (tags && tags.length > 0) {
+    filter.tags = { $all: tags }
   }
 
   return Promise.all([
