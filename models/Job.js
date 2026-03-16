@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const { JOB_STATUSES } = require('../constants/domain')
 
 const jobSchema = new mongoose.Schema(
   {
@@ -8,13 +9,22 @@ const jobSchema = new mongoose.Schema(
     location: { type: String, default: '' },
     description: { type: String, default: '' },
     requirements: { type: String, default: '' },
+    jobType: { type: String, default: '' },
+    experienceLevel: { type: String, default: '' },
+    currency: { type: String, default: 'VND' },
+    skills: [{ type: String }],
     experienceYears: { type: Number, default: null },
     salaryMin: { type: Number, default: null },
     salaryMax: { type: Number, default: null },
     deadline: { type: Date, default: null },
-    status: { type: String, enum: ['draft', 'open', 'closed'], default: 'open' },
+    detailViewCount: { type: Number, default: 0 },
+    status: { type: String, enum: Object.values(JOB_STATUSES), default: JOB_STATUSES.OPEN },
   },
   { timestamps: true },
 )
+
+jobSchema.index({ status: 1, createdAt: -1 })
+jobSchema.index({ recruiterId: 1, createdAt: -1 })
+jobSchema.index({ title: 'text', company: 'text', description: 'text' })
 
 module.exports = mongoose.model('Job', jobSchema)

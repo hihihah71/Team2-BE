@@ -1,15 +1,17 @@
 const jwt = require('jsonwebtoken')
-const User = require('../models/User')
+const { unauthorized, forbidden } = require('../utils/httpError')
 
 /**
  * Xác thực JWT, gắn req.user (id, role). Dùng cho route cần đăng nhập.
  */
 function auth(req, res, next) {
   const authHeader = req.headers.authorization
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+  const tokenFromHeader = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+  const tokenFromQuery = typeof req.query.token === 'string' ? req.query.token : null
+  const token = tokenFromHeader || tokenFromQuery
 
   if (!token) {
-    return res.status(401).json({ message: 'Chưa đăng nhập' })
+    return next(unauthorized('Chưa đăng nhập'))
   }
 
   try {
@@ -18,7 +20,7 @@ function auth(req, res, next) {
     req.role = decoded.role
     next()
   } catch {
-    return res.status(401).json({ message: 'Token không hợp lệ hoặc đã hết hạn' })
+    return next(unauthorized('Token không hợp lệ hoặc đã hết hạn'))
   }
 }
 
@@ -28,7 +30,7 @@ function auth(req, res, next) {
 function requireRole(...allowedRoles) {
   return (req, res, next) => {
     if (!req.role || !allowedRoles.includes(req.role)) {
-      return res.status(403).json({ message: 'Không có quyền truy cập' })
+      return next(forbidden('Không có quyền truy cập'))
     }
     next()
   }
