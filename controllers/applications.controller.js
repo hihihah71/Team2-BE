@@ -34,6 +34,11 @@ async function rejectMyApplication(req, res) {
   res.json(data)
 }
 
+async function accept(req, res) {
+  const data = await applicationsService.studentAcceptApplication(req.params.id, req.userId)
+  res.json(data)
+}
+
 module.exports = {
   getMyApplications,
   apply,
@@ -41,4 +46,5 @@ module.exports = {
   getApplicantByJob,
   updateStatus,
   rejectMyApplication,
+  accept,
 }

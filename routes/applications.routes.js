@@ -41,4 +41,13 @@ router.patch(
   asyncHandler(applicationsController.rejectMyApplication),
 )
 
+router.patch(
+  '/:id/accept', 
+  auth, 
+  requireRole('student'), // Thêm cái này để bảo mật
+  asyncHandler(applicationsController.accept)
+)
+
+
 module.exports = router
+

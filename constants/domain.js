@@ -15,6 +15,7 @@ const APPLICATION_STATUSES = {
   INTERVIEW: 'interview',
   REJECTED: 'rejected',
   OFFERED: 'offered',
+  ACCEPTED: 'accepted',
 }
 
 const APPLICATION_STATUS_FLOW = {

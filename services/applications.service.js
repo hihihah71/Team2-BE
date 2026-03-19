@@ -204,6 +204,32 @@ async function studentRejectApplication(applicationId, studentId) {
   return applicationRepository.findByIdWithRelations(app._id)
 }
 
+async function studentAcceptApplication(applicationId, studentId) {
+  const app = await applicationRepository.findByIdAndApplicant(applicationId, studentId)
+  if (!app) throw notFound('Không tìm thấy đơn hoặc không có quyền')
+  
+  // Only allow accepting if the current status is 'offered'
+  if (app.status !== 'offered') {
+    throw badRequest('Chỉ có thể chấp nhận khi có lời mời (offered)')
+  }
+
+  app.status = 'accepted' // Ensure 'accepted' is in your APPLICATION_STATUSES constant!
+  app.statusHistory.push({ status: 'accepted', updatedAt: new Date() })
+  await app.save()
+
+  // Notify the Recruiter
+  await notificationsService.createNotification({
+    userId: app.jobId.recruiterId,
+    type: 'application_accepted_by_student',
+    title: 'Ứng viên đã chấp nhận công việc',
+    message: `Ứng viên đã chấp nhận lời mời làm việc cho bài "${app.jobId.title}".`,
+    entityType: 'job',
+    entityId: app.jobId._id,
+  })
+
+  return applicationRepository.findByIdWithRelations(app._id)
+}
+
 module.exports = {
   getStudentApplicationsOverview,
   applyToJob,
@@ -211,4 +237,5 @@ module.exports = {
   getApplicantByJob,
   updateStatus,
   studentRejectApplication,
+  studentAcceptApplication, 
 }
