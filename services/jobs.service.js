@@ -123,6 +123,13 @@ async function unsaveJob(jobId, userId) {
   return { message: 'Đã bỏ lưu tin' }
 }
 
+async function deleteMultipleJobs(jobIds, recruiterId) {
+  return await jobRepository.deleteMany({
+    _id: { $in: jobIds },
+    recruiterId: recruiterId
+  });
+}
+
 module.exports = {
   listJobs,
   listMyJobs,
@@ -134,4 +141,5 @@ module.exports = {
   trackJobDetailView,
   saveJob,
   unsaveJob,
+  deleteMultipleJobs // <--- ADD THIS HERE
 }

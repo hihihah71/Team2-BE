@@ -53,6 +53,10 @@ function findOneAndDeleteOwned(id, recruiterId) {
   return Job.findOneAndDelete({ _id: id, recruiterId })
 }
 
+function deleteMany(filter) {
+  return Job.deleteMany(filter)
+}
+
 module.exports = {
   listPublicJobs,
   listRecruiterJobs,
@@ -61,4 +65,5 @@ module.exports = {
   incrementDetailViewCount,
   create,
   findOneAndDeleteOwned,
+  deleteMany,
 }
