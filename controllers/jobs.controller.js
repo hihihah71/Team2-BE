@@ -50,6 +50,19 @@ async function unsaveJob(req, res) {
   res.json(data)
 }
 
+async function deleteMultipleJobs(req, res) {
+  try {
+    const { jobIds } = req.body; // Matches the key sent from frontend
+    if (!jobIds || !Array.isArray(jobIds)) {
+      return res.status(400).json({ message: "Invalid job IDs" });
+    }
+    await jobsService.deleteMultipleJobs(jobIds, req.userId);
+    res.json({ message: "Deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
 module.exports = {
   listJobs,
   listMyJobs,
@@ -61,4 +74,5 @@ module.exports = {
   trackJobView,
   saveJob,
   unsaveJob,
+  deleteMultipleJobs 
 }
