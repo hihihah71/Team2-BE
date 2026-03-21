@@ -29,5 +29,12 @@ router.delete('/:id', auth, requireRole('recruiter'), asyncHandler(jobsControlle
 router.get('/:id/stats', auth, requireRole('recruiter'), asyncHandler(jobsController.getJobStats))
 router.post('/:id/save', auth, requireRole('student'), asyncHandler(jobsController.saveJob))
 router.delete('/:id/save', auth, requireRole('student'), asyncHandler(jobsController.unsaveJob))
+router.post(
+  "/bulk-delete",
+  auth,
+  requireRole("recruiter"),
+  asyncHandler(jobsController.deleteMultipleJobs)
+);
+
 
 module.exports = router
