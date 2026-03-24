@@ -31,6 +31,14 @@ function listByUserIdLean(userId) {
   return Cv.find({ userId }).select('-fileData').lean()
 }
 
+function findBySlug(slug) {
+  return Cv.findOne({ slug, isPublic: true }).select('-fileData')
+}
+
+function incrementViewCount(slug) {
+  return Cv.findOneAndUpdate({ slug }, { $inc: { viewCount: 1 } }, { new: true })
+}
+
 module.exports = {
   listByUserId,
   clearDefaultByUserId,
@@ -39,4 +47,6 @@ module.exports = {
   findById,
   deleteOwnedCv,
   listByUserIdLean,
+  findBySlug,
+  incrementViewCount,
 }

@@ -2,6 +2,7 @@
   "name": "Team2-BE",
   "packageManager": "yarn@4.9.2",
   "dependencies": {
+    "@google/genai": "^1.46.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
