@@ -1,26 +1,32 @@
 const Application = require('../models/Application')
 
-function listByApplicantId(applicantId) {
+async function listByApplicantId(applicantId) {
   return Application.find({ applicantId })
-    .populate('jobId', 'title company location status')
+    .populate('jobId') 
     .sort({ createdAt: -1 })
-    .lean()
+    .lean();
 }
 
 function findByJobAndApplicant(jobId, applicantId) {
   return Application.findOne({ jobId, applicantId })
 }
 
-function findByIdAndApplicant(id, applicantId) {
-  return Application.findOne({ _id: id, applicantId }).populate('jobId', 'recruiterId title company')
+async function findByIdAndApplicant(id, applicantId) {
+  return Application.findOne({ _id: id, applicantId })
+    .populate('jobId'); 
 }
 
 function create(payload) {
   return Application.create(payload)
 }
 
-function findByIdWithJob(id) {
-  return Application.findById(id).populate('jobId', 'recruiterId title company')
+async function findByIdWithJob(id) {
+  return Application.findById(id)
+    .populate({
+      path: 'jobId',
+      select: 'recruiterId title company',
+    })
+    ; 
 }
 
 function findByIdWithRelations(id) {
@@ -60,6 +66,39 @@ function findOneByCvId(cvId) {
   return Application.findOne({ cvId }).populate('jobId', 'recruiterId')
 }
 
+async function acceptOffer(applicationId, userId) {
+  const app = await Application.findOne({ _id: applicationId, applicantId: userId })
+
+  if (!app) throw new Error('Application not found')
+
+  if (app.status !== 'offered') {
+    throw new Error('Only offered applications can be accepted')
+  }
+
+  app.status = 'accepted'
+  app.statusHistory.push({ status: 'accepted' })
+
+  await app.save()
+  return app
+}
+
+async function refuseOffer(applicationId, userId) {
+  const app = await Application.findOne({ _id: applicationId, applicantId: userId })
+
+  if (!app) throw new Error('Application not found')
+
+  if (app.status !== 'offered') {
+    throw new Error('Only offered applications can be refused')
+  }
+
+  app.status = 'refused'
+  app.rejectedBy = 'student'
+  app.statusHistory.push({ status: 'refused' })
+
+  await app.save()
+  return app
+}
+
 module.exports = {
   listByApplicantId,
   findByJobAndApplicant,
@@ -72,4 +111,6 @@ module.exports = {
   aggregateStatusByJob,
   listByJobIds,
   findOneByCvId,
+  acceptOffer,
+  refuseOffer,
 }

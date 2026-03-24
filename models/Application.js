@@ -5,6 +5,8 @@ const applicationSchema = new mongoose.Schema(
   {
     jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', required: true },
     applicantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    interviewDate: { type: Date },
+    interviewLocation: { type: String },
     cvId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cv', default: null },
     cvSource: {
       type: String,
