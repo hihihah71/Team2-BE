@@ -137,9 +137,10 @@ async function getApplicantByJob(jobId, applicantId, recruiterId) {
   if (!app) throw notFound('Không tìm thấy đơn ứng tuyển')
   return app
 }
-
-async function updateStatus(applicationId, recruiterId, status) {
+async function updateStatus(applicationId, recruiterId, payload) {
+  const status = payload.status 
   const app = await applicationRepository.findByIdWithJob(applicationId)
+  
   if (!app || String(app.jobId.recruiterId) !== String(recruiterId)) {
     throw notFound('Không tìm thấy đơn hoặc không có quyền')
   }
@@ -150,9 +151,16 @@ async function updateStatus(applicationId, recruiterId, status) {
   }
 
   app.status = status
+  
+  // FIXED: Changed reqBody to payload to prevent ReferenceError
+  if (status === 'interview') {
+    app.interviewDate = payload?.interviewDate || null
+  }
+
   app.rejectedBy = status === 'rejected' ? 'recruiter' : null
   app.statusHistory = Array.isArray(app.statusHistory) ? app.statusHistory : []
   app.statusHistory.push({ status, updatedAt: new Date() })
+  
   await app.save()
 
   await notificationsService.createNotification({
@@ -204,6 +212,104 @@ async function studentRejectApplication(applicationId, studentId) {
   return applicationRepository.findByIdWithRelations(app._id)
 }
 
+async function acceptOffer(applicationId, studentId) {
+  const app = await applicationRepository.findByIdAndApplicant(applicationId, studentId)
+
+  if (!app) {
+    throw notFound('Không tìm thấy đơn hoặc không có quyền')
+  }
+
+  if (app.status !== 'offered') {
+    throw badRequest('Chỉ có thể chấp nhận khi đang ở trạng thái offered')
+  }
+
+  app.status = 'accepted'
+  app.statusHistory = Array.isArray(app.statusHistory) ? app.statusHistory : []
+  app.statusHistory.push({ status: 'accepted', updatedAt: new Date() })
+
+  await app.save()
+
+  await notificationsService.createNotification({
+    userId: app.jobId.recruiterId,
+    type: 'offer_accepted',
+    title: 'Ứng viên chấp nhận offer',
+    message: `Ứng viên đã chấp nhận công việc "${app.jobId.title || 'Không rõ'}".`,
+    entityType: 'job',
+    entityId: app.jobId._id,
+  })
+
+  return applicationRepository.findByIdWithRelations(app._id)
+}
+
+// applications.service.js
+
+async function acceptInterview(applicationId, studentId) {
+  const app = await applicationRepository.findByIdWithJob(applicationId); // ensures jobId populated
+
+  if (!app || String(app.applicantId) !== String(studentId)) {
+    throw notFound('Không tìm thấy đơn');
+  }
+
+  const targetRecruiter = app.jobId?.recruiterId;
+  const jobTitle = app.jobId?.title || 'Công việc';
+
+  app.status = 'interview_accepted';
+  app.statusHistory = Array.isArray(app.statusHistory) ? app.statusHistory : [];
+  app.statusHistory.push({ status: 'interview_accepted', updatedAt: new Date() });
+
+  await app.save();
+
+  const [studentUser, studentProfile] = await Promise.all([
+    userRepository.findByIdLean(studentId),
+    profileRepository.findByUserIdLean(studentId),
+  ]);
+
+  const studentName = studentProfile?.personalInfo?.fullName || studentUser?.fullName || 'Ứng viên';
+
+  if (targetRecruiter) {
+    await notificationsService.createNotification({
+      userId: targetRecruiter,
+      type: 'interview_accepted',
+      title: 'Ứng viên chấp nhận phỏng vấn',
+      message: `${studentName} đã chấp nhận phỏng vấn cho bài "${jobTitle}".`,
+      entityType: 'job',
+      entityId: app.jobId._id,
+    });
+  }
+
+  return applicationRepository.findByIdWithRelations(app._id);
+}
+
+async function refuseOffer(applicationId, studentId) {
+  const app = await applicationRepository.findByIdAndApplicant(applicationId, studentId);
+
+  if (!app) {
+    throw notFound('Không tìm thấy đơn hoặc không có quyền');
+  }
+
+  if (app.status !== 'offered') {
+    throw badRequest('Chỉ có thể từ chối khi đang ở trạng thái offered');
+  }
+
+  app.status = 'rejected';
+  app.rejectedBy = 'student';
+  app.statusHistory = Array.isArray(app.statusHistory) ? app.statusHistory : [];
+  app.statusHistory.push({ status: 'rejected', updatedAt: new Date() });
+
+  await app.save();
+
+  await notificationsService.createNotification({
+    userId: app.jobId.recruiterId,
+    type: 'offer_rejected',
+    title: 'Ứng viên từ chối offer',
+    message: `Ứng viên đã từ chối công việc "${app.jobId.title || 'Không rõ'}".`,
+    entityType: 'job',
+    entityId: app.jobId._id,
+  });
+
+  return applicationRepository.findByIdWithRelations(app._id);
+}
+
 module.exports = {
   getStudentApplicationsOverview,
   applyToJob,
@@ -211,4 +317,7 @@ module.exports = {
   getApplicantByJob,
   updateStatus,
   studentRejectApplication,
+  acceptOffer,
+  refuseOffer,
+  acceptInterview,
 }

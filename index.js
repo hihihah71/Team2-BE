@@ -16,6 +16,8 @@ const dashboardRoutes = require('./routes/dashboard.routes')
 const savedJobsRoutes = require('./routes/savedJobs.routes')
 const notificationsRoutes = require('./routes/notifications.routes')
 
+
+
 validateEnv()
 
 const app = express()
@@ -62,3 +64,5 @@ mongoose
     })
   })
   .catch((error) => console.error('Mongo error:', error))
+
+  

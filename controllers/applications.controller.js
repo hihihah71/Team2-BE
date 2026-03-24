@@ -1,3 +1,4 @@
+const Application = require('../models/Application');
 const applicationsService = require('../services/applications.service')
 
 async function getMyApplications(req, res) {
@@ -25,7 +26,7 @@ async function getApplicantByJob(req, res) {
 }
 
 async function updateStatus(req, res) {
-  const data = await applicationsService.updateStatus(req.params.id, req.userId, req.body.status)
+  const data = await applicationsService.updateStatus(req.params.id, req.userId, req.body)
   res.json(data)
 }
 
@@ -34,6 +35,40 @@ async function rejectMyApplication(req, res) {
   res.json(data)
 }
 
+async function acceptOffer(req, res) {
+  try {
+    const app = await applicationsService.acceptOffer(req.params.id, req.userId)
+    res.json(app)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ success: false, message: err.message })
+  }
+}
+
+async function refuseOffer(req, res) {
+  try {
+    const app = await applicationsService.refuseOffer(req.params.id, req.userId)
+    res.json(app)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ success: false, message: err.message })
+  }
+}
+
+// ... keep all your other functions (getMyApplications, apply, etc.) ...
+
+// 1. Rewrite this function as an 'async function' to match your style
+async function acceptInterview(req, res) {
+  try {
+    const application = await applicationsService.acceptInterview(req.params.id, req.userId)
+    res.json(application)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ success: false, message: err.message || 'Lỗi máy chủ.' })
+  }
+}
+
+
 module.exports = {
   getMyApplications,
   apply,
@@ -41,4 +76,7 @@ module.exports = {
   getApplicantByJob,
   updateStatus,
   rejectMyApplication,
+  acceptOffer,
+  refuseOffer,
+  acceptInterview, 
 }
