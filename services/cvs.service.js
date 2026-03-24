@@ -5,7 +5,7 @@ const { badRequest, notFound } = require('../utils/httpError')
 function normalizePdfInput(payload) {
   if (!payload.fileDataBase64) {
     return {
-      name: payload.name,
+      name: payload.name || 'Untitled CV',
       fileData: null,
       fileMimeType: '',
       fileSize: 0,
@@ -13,24 +13,24 @@ function normalizePdfInput(payload) {
   }
 
   const mimeType = payload.fileMimeType || 'application/pdf'
-  if (mimeType !== 'application/pdf') {
-    throw badRequest('Chỉ hỗ trợ file PDF')
+  if (mimeType !== 'application/pdf' && mimeType !== 'image/png') {
+    throw badRequest('Chỉ hỗ trợ file PDF hoặc PNG')
   }
 
-  const cleanedBase64 = String(payload.fileDataBase64).replace(/^data:application\/pdf;base64,/, '')
+  const cleanedBase64 = String(payload.fileDataBase64).replace(/^data:(application\/pdf|image\/png);base64,/, '')
   const fileBuffer = Buffer.from(cleanedBase64, 'base64')
   if (!fileBuffer.length) {
-    throw badRequest('File PDF không hợp lệ')
+    throw badRequest('File không hợp lệ')
   }
-  if (fileBuffer.length > 5 * 1024 * 1024) {
-    throw badRequest('File PDF tối đa 5MB')
+  if (fileBuffer.length > 10 * 1024 * 1024) {
+    throw badRequest('File tối đa 10MB')
   }
 
-  const normalizedName = payload.name || payload.fileName || 'CV.pdf'
+  const normalizedName = payload.name || payload.fileName || 'CV_Export'
   return {
     name: normalizedName,
     fileData: fileBuffer,
-    fileMimeType: 'application/pdf',
+    fileMimeType: mimeType,
     fileSize: fileBuffer.length,
   }
 }
@@ -52,6 +52,10 @@ async function createCv(userId, payload) {
     fileMimeType: fileData.fileMimeType,
     fileSize: fileData.fileSize,
     isDefault: payload.isDefault || false,
+    cvData: payload.cvData || {},
+    slug: payload.slug || undefined,
+    isPublic: payload.isPublic || false,
+    parentCvId: payload.parentCvId || null,
   })
   if (created.fileData) {
     created.fileUrl = `/api/cvs/${created._id}/file`
@@ -69,6 +73,10 @@ async function updateCv(cvId, userId, payload) {
 
   if (payload.name != null) cv.name = payload.name
   if (payload.fileUrl != null) cv.fileUrl = payload.fileUrl
+  if (payload.cvData != null) cv.cvData = payload.cvData
+  if (payload.slug !== undefined) cv.slug = payload.slug || undefined
+  if (payload.isPublic != null) cv.isPublic = payload.isPublic
+
   if (payload.fileDataBase64) {
     const fileData = normalizePdfInput(payload)
     cv.name = fileData.name
@@ -89,6 +97,37 @@ async function updateCv(cvId, userId, payload) {
   return cv
 }
 
+async function cloneVersion(cvId, userId, newName) {
+  const original = await cvRepository.findOwnedCv(cvId, userId)
+  if (!original) throw notFound('CV gốc không tồn tại')
+  
+  const created = await cvRepository.create({
+    userId,
+    name: newName || `${original.name} (Bản sao)`,
+    fileUrl: '',
+    fileData: original.fileData,
+    fileMimeType: original.fileMimeType,
+    fileSize: original.fileSize,
+    isDefault: false,
+    cvData: original.cvData,
+    parentCvId: cvId,
+  })
+  if (created.fileData) {
+    created.fileUrl = `/api/cvs/${created._id}/file`
+    await created.save()
+  }
+  return created;
+}
+
+async function getPublicCv(slug) {
+  const cv = await cvRepository.findBySlug(slug)
+  if (!cv) throw notFound('Trang CV không tồn tại hoặc đang ở chế độ riêng tư')
+  
+  // Fire and forget view count update
+  cvRepository.incrementViewCount(slug).catch(console.error)
+  return cv;
+}
+
 async function getCvFileByAccess(cvId, userId, role) {
   const cv = await cvRepository.findById(cvId)
   if (!cv) throw notFound('Không tìm thấy CV')
@@ -106,17 +145,17 @@ async function getCvFileByAccess(cvId, userId, role) {
     }
   }
 
-  if (role !== 'student' && role !== 'recruiter') {
+  if (role !== 'student' && role !== 'recruiter' && !isOwner) {
     throw notFound('Không tìm thấy CV hoặc không có quyền')
   }
 
   if (!cv.fileData || !cv.fileMimeType) {
-    throw notFound('CV này không có file PDF đã upload')
+    throw notFound('CV này không có file PDF/PNG đã upload')
   }
   return {
     buffer: cv.fileData,
     mimeType: cv.fileMimeType,
-    name: cv.name || 'CV.pdf',
+    name: cv.name || 'CV',
   }
 }
 
@@ -126,4 +165,4 @@ async function deleteCv(cvId, userId) {
   return { message: 'Đã xóa CV' }
 }
 
-module.exports = { listMyCvs, createCv, updateCv, deleteCv, getCvFileByAccess }
+module.exports = { listMyCvs, createCv, updateCv, deleteCv, getCvFileByAccess, cloneVersion, getPublicCv }
