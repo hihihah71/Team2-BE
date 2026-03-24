@@ -1,15 +1,19 @@
 const Notification = require('../models/Notification')
 
-function create(payload) {
-  return Notification.create(payload)
+// Đảm bảo chỉ định nghĩa một lần và có đầy đủ async/await
+async function create(payload) {
+  return await Notification.create(payload)
 }
 
-function listByUserId(userId) {
-  return Notification.find({ userId }).sort({ createdAt: -1 }).lean()
+async function listByUserId(userId) {
+  console.log("FETCH notifications for user:", userId);
+  return await Notification.find({ userId })
+    .sort({ createdAt: -1 })
+    .lean()
 }
 
-function markAsRead(notificationId, userId) {
-  return Notification.findOneAndUpdate(
+async function markAsRead(notificationId, userId) {
+  return await Notification.findOneAndUpdate(
     { _id: notificationId, userId },
     { isRead: true },
     { new: true },

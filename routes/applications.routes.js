@@ -27,6 +27,14 @@ router.get(
   requireRole('recruiter'),
   asyncHandler(applicationsController.getApplicantByJob),
 )
+
+router.patch(
+  '/:id/accept-interview',
+  auth,
+  requireRole('student'),
+  asyncHandler(applicationsController.acceptInterview) )
+
+
 router.patch(
   '/:id',
   auth,
@@ -40,5 +48,21 @@ router.patch(
   requireRole('student'),
   asyncHandler(applicationsController.rejectMyApplication),
 )
+
+router.patch(
+  '/:id/accept-offer',
+  auth,
+  requireRole('student'),
+  asyncHandler(applicationsController.acceptOffer),
+)
+
+router.patch(
+  '/:id/refuse-offer',
+  auth,
+  requireRole('student'),
+  asyncHandler(applicationsController.refuseOffer),
+)
+
+
 
 module.exports = router
