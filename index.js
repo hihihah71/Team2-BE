@@ -15,6 +15,7 @@ const profileRoutes = require('./routes/profile.routes')
 const dashboardRoutes = require('./routes/dashboard.routes')
 const savedJobsRoutes = require('./routes/savedJobs.routes')
 const notificationsRoutes = require('./routes/notifications.routes')
+const aiRoutes = require('./routes/ai.routes')
 
 
 
@@ -34,8 +35,8 @@ app.use(
 )
 app.use(
   express.json({
-    // CV PDF upload (base64) needs larger JSON than default 100kb.
-    limit: '6mb',
+    // CV PDF upload (base64) & cvData payload needs larger JSON than default 100kb.
+    limit: '20mb',
   }),
 )
 
@@ -51,6 +52,7 @@ app.use('/api/saved-jobs', savedJobsRoutes)
 app.use('/api/notifications', notificationsRoutes)
 app.use('/api/profile', profileRoutes)
 app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/ai', aiRoutes)
 app.use(errorHandler)
 
 const PORT = process.env.PORT || 3000
@@ -65,4 +67,3 @@ mongoose
   })
   .catch((error) => console.error('Mongo error:', error))
 
-  

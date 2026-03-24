@@ -7,6 +7,7 @@ const { asyncHandler } = require('../utils/asyncHandler')
 
 const router = express.Router()
 
+router.get('/public/:slug', asyncHandler(cvsController.getPublicCv))
 router.get('/me', auth, requireRole('student'), asyncHandler(cvsController.getMyCvs))
 router.post(
   '/',
@@ -15,6 +16,7 @@ router.post(
   validateBody(validateCreateCv),
   asyncHandler(cvsController.createCv),
 )
+router.post('/:id/versions', auth, requireRole('student'), asyncHandler(cvsController.cloneVersion))
 router.get('/:id/file', auth, asyncHandler(cvsController.getCvFile))
 router.put('/:id', auth, requireRole('student'), asyncHandler(cvsController.updateCv))
 router.delete('/:id', auth, requireRole('student'), asyncHandler(cvsController.deleteCv))

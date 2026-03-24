@@ -27,4 +27,14 @@ async function getCvFile(req, res) {
   res.send(file.buffer)
 }
 
-module.exports = { getMyCvs, createCv, updateCv, deleteCv, getCvFile }
+async function cloneVersion(req, res) {
+  const data = await cvsService.cloneVersion(req.params.id, req.userId, req.body.newName)
+  res.status(201).json(data)
+}
+
+async function getPublicCv(req, res) {
+  const data = await cvsService.getPublicCv(req.params.slug)
+  res.json(data)
+}
+
+module.exports = { getMyCvs, createCv, updateCv, deleteCv, getCvFile, cloneVersion, getPublicCv }
