@@ -1,0 +1,142 @@
+{
+  "credentials": {
+    "email": "student_demo@gmail.com",
+    "password": "Password123456"
+  },
+  "user": {
+    "id": "69c3d26a82f80d9f1348cee0",
+    "fullName": "Demo Student",
+    "email": "student_demo@gmail.com",
+    "role": "student"
+  },
+  "profile": {
+    "userId": "69c3d26a82f80d9f1348cee0",
+    "personalInfo": {
+      "fullName": "Demo Student",
+      "role": "Fullstack Developer",
+      "dob": "2000-01-01",
+      "phone": "0123456789",
+      "email": "student_demo@gmail.com",
+      "address": "Hanoi, Vietnam",
+      "summary": "I am a passionate developer with experience in React and Node.js.",
+      "id": "",
+      "isVerified": false,
+      "avatarUrl": "",
+      "coverUrl": "",
+      "github": "",
+      "linkedin": "",
+      "portfolio": ""
+    },
+    "companyInfo": {
+      "companyName": "",
+      "website": "",
+      "size": "",
+      "address": "",
+      "description": ""
+    },
+    "skills": [
+      "JavaScript",
+      "TypeScript",
+      "React",
+      "Node.js",
+      "Express",
+      "MongoDB"
+    ],
+    "experiences": [
+      {
+        "title": "Frontend Intern",
+        "company": "Tech Solutions",
+        "date": "Jan 2023 - June 2023",
+        "desc": "Worked on building responsive UI components using React.",
+        "_id": "69c3d26a82f80d9f1348cee3"
+      }
+    ],
+    "educations": [
+      {
+        "title": "Bachelor of Computer Science",
+        "school": "FPT University",
+        "date": "2018 - 2022",
+        "desc": "Specialized in Software Engineering.",
+        "_id": "69c3d26a82f80d9f1348cee4"
+      }
+    ],
+    "socialLinks": {
+      "github": "",
+      "linkedin": "",
+      "portfolio": ""
+    },
+    "hobbies": [],
+    "_id": "69c3d26a82f80d9f1348cee2",
+    "projects": [],
+    "languages": [],
+    "certifications": [],
+    "activities": [],
+    "createdAt": "2026-03-25T12:17:46.478Z",
+    "updatedAt": "2026-03-25T12:17:46.478Z",
+    "__v": 0
+  },
+  "cv": {
+    "userId": "69c3d26a82f80d9f1348cee0",
+    "name": "Default Demo CV",
+    "fileUrl": "",
+    "fileData": null,
+    "fileMimeType": "",
+    "fileSize": 0,
+    "isDefault": true,
+    "cvData": {
+      "template": "modern",
+      "sections": {
+        "personal": {
+          "fullName": "Demo Student",
+          "role": "Fullstack Developer",
+          "dob": "2000-01-01",
+          "phone": "0123456789",
+          "email": "student_demo@gmail.com",
+          "address": "Hanoi, Vietnam",
+          "summary": "I am a passionate developer with experience in React and Node.js.",
+          "id": "",
+          "isVerified": false,
+          "avatarUrl": "",
+          "coverUrl": "",
+          "github": "",
+          "linkedin": "",
+          "portfolio": ""
+        },
+        "summary": "I am a passionate developer with experience in React and Node.js.",
+        "experience": [
+          {
+            "title": "Frontend Intern",
+            "company": "Tech Solutions",
+            "date": "Jan 2023 - June 2023",
+            "desc": "Worked on building responsive UI components using React.",
+            "_id": "69c3d26a82f80d9f1348cee3"
+          }
+        ],
+        "education": [
+          {
+            "title": "Bachelor of Computer Science",
+            "school": "FPT University",
+            "date": "2018 - 2022",
+            "desc": "Specialized in Software Engineering.",
+            "_id": "69c3d26a82f80d9f1348cee4"
+          }
+        ],
+        "skills": [
+          "JavaScript",
+          "TypeScript",
+          "React",
+          "Node.js",
+          "Express",
+          "MongoDB"
+        ]
+      }
+    },
+    "isPublic": false,
+    "viewCount": 0,
+    "parentCvId": null,
+    "_id": "69c3d26a82f80d9f1348cee6",
+    "createdAt": "2026-03-25T12:17:46.486Z",
+    "updatedAt": "2026-03-25T12:17:46.486Z",
+    "__v": 0
+  }
+}
