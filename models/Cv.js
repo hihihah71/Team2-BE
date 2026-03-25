@@ -11,7 +11,7 @@ const cvSchema = new mongoose.Schema(
     isDefault: { type: Boolean, default: false },
     // SaaS Builder fields
     cvData: { type: mongoose.Schema.Types.Mixed, default: {} },
-    slug: { type: String, sparse: true }, 
+    slug: { type: String }, 
     isPublic: { type: Boolean, default: false },
     viewCount: { type: Number, default: 0 },
     parentCvId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cv', default: null },
