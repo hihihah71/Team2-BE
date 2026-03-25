@@ -15,7 +15,9 @@ const profileRoutes = require('./routes/profile.routes')
 const dashboardRoutes = require('./routes/dashboard.routes')
 const savedJobsRoutes = require('./routes/savedJobs.routes')
 const notificationsRoutes = require('./routes/notifications.routes')
+const adminRoutes = require('./routes/admin.routes')
 const aiRoutes = require('./routes/ai.routes')
+const { mongoSanitize } = require('./middleware/security')
 
 
 
@@ -26,6 +28,7 @@ app.disable('x-powered-by')
 app.use(requestId)
 app.use(accessLog)
 app.use(rateLimit)
+app.use(mongoSanitize)
 
 app.use(
   cors({
@@ -53,6 +56,7 @@ app.use('/api/notifications', notificationsRoutes)
 app.use('/api/profile', profileRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/ai', aiRoutes)
+app.use('/api/admin', adminRoutes)
 app.use(errorHandler)
 
 const PORT = process.env.PORT || 3000

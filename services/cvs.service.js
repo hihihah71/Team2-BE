@@ -73,7 +73,10 @@ async function updateCv(cvId, userId, payload) {
 
   if (payload.name != null) cv.name = payload.name
   if (payload.fileUrl != null) cv.fileUrl = payload.fileUrl
-  if (payload.cvData != null) cv.cvData = payload.cvData
+  if (payload.cvData != null) {
+    cv.cvData = payload.cvData
+    cv.markModified('cvData')
+  }
   if (payload.slug !== undefined) cv.slug = payload.slug || undefined
   if (payload.isPublic != null) cv.isPublic = payload.isPublic
 
@@ -128,24 +131,35 @@ async function getPublicCv(slug) {
   return cv;
 }
 
-async function getCvFileByAccess(cvId, userId, role) {
+async function getCvFileByAccess(cvId, userId, role, applicationId) {
   const cv = await cvRepository.findById(cvId)
   if (!cv) throw notFound('Không tìm thấy CV')
 
   const isOwner = String(cv.userId) === String(userId)
-  if (role === 'student' && !isOwner) {
-    throw notFound('Không tìm thấy CV hoặc không có quyền')
-  }
-
-  if (role === 'recruiter') {
-    const application = await applicationRepository.findOneByCvId(cvId)
-    const recruiterId = application?.jobId?.recruiterId
-    if (!application || String(recruiterId) !== String(userId)) {
-      throw notFound('Không tìm thấy CV hoặc không có quyền')
+  
+  // Rule 1: Owner ALWAYS has access
+  if (isOwner) {
+    // proceed to return file
+  } 
+  // Rule 2: Recruiter needs a valid application for THIS CV and THIS recruiter
+  else if (role === 'recruiter') {
+    if (!applicationId) {
+      throw badRequest('Thiếu thông tin ID đơn ứng tuyển để xác thực quyền xem CV')
     }
-  }
-
-  if (role !== 'student' && role !== 'recruiter' && !isOwner) {
+    const application = await applicationRepository.findByIdWithJob(applicationId)
+    const recruiterId = application?.jobId?.recruiterId
+    
+    // Check if application exists, matches this recruiter, AND uses this CV
+    if (
+      !application || 
+      String(recruiterId) !== String(userId) || 
+      String(application.cvId) !== String(cvId)
+    ) {
+      throw notFound('Không tìm thấy CV hoặc không có quyền truy cập qua đơn này')
+    }
+  } 
+  // Rule 3: Any other case where user is not owner
+  else {
     throw notFound('Không tìm thấy CV hoặc không có quyền')
   }
 

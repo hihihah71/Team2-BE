@@ -2,7 +2,7 @@ const Application = require('../models/Application')
 
 async function listByApplicantId(applicantId) {
   return Application.find({ applicantId })
-    .populate('jobId') 
+    .populate('jobId', 'title company location status') 
     .sort({ createdAt: -1 })
     .lean();
 }
@@ -13,7 +13,7 @@ function findByJobAndApplicant(jobId, applicantId) {
 
 async function findByIdAndApplicant(id, applicantId) {
   return Application.findOne({ _id: id, applicantId })
-    .populate('jobId'); 
+    .populate('jobId', 'title company location status recruiterId'); 
 }
 
 function create(payload) {

@@ -21,7 +21,8 @@ async function deleteCv(req, res) {
 }
 
 async function getCvFile(req, res) {
-  const file = await cvsService.getCvFileByAccess(req.params.id, req.userId, req.role)
+  const { applicationId } = req.query
+  const file = await cvsService.getCvFileByAccess(req.params.id, req.userId, req.role, applicationId)
   res.setHeader('Content-Type', file.mimeType)
   res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(file.name)}"`)
   res.send(file.buffer)

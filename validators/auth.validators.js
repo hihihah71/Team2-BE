@@ -8,10 +8,14 @@ function validateRegister(body) {
     return 'Role không hợp lệ'
   }
 
-  // Regex check email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  // Regex for standard email validation
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   if (!emailRegex.test(body.email)) {
-    return 'Email không đúng định dạng'
+    return 'Email không đúng định dạng (vd: name@domain.com)'
+  }
+
+  if (body.fullName && (body.fullName.length < 2 || body.fullName.length > 50)) {
+    return 'Họ tên phải từ 2 đến 50 ký tự'
   }
 
   if (String(body.password).length < 6) {
@@ -25,7 +29,7 @@ function validateLogin(body) {
   if (!body.email || !body.password) {
     return 'Thiếu email hoặc mật khẩu'
   }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   if (!emailRegex.test(body.email)) {
     return 'Email không đúng định dạng'
   }

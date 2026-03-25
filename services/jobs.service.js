@@ -12,7 +12,11 @@ async function listJobs(query) {
   } else if (!Array.isArray(parsed.tags)) {
     parsed.tags = []
   }
-  const [items, total] = await jobRepository.listPublicJobs(parsed)
+  const [items, total] = await jobRepository.listPublicJobs({
+    ...parsed,
+    location: query.location,
+    salaryMin: query.salaryMin,
+  })
   return { items, total }
 }
 
@@ -141,5 +145,5 @@ module.exports = {
   trackJobDetailView,
   saveJob,
   unsaveJob,
-  deleteMultipleJobs // <--- ADD THIS HERE
+  deleteMultipleJobs
 }

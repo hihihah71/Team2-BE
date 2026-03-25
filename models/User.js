@@ -5,7 +5,8 @@ const userSchema = new mongoose.Schema(
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
-    role: { type: String, enum: ['student', 'recruiter'], required: true },
+    role: { type: String, enum: ['student', 'recruiter', 'admin'], required: true },
+    isVerifiedRecruiter: { type: Boolean, default: false },
   },
   { timestamps: true },
 )
