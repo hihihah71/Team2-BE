@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken')
 const { OAuth2Client } = require('google-auth-library')
 const userRepository = require('../repositories/user.repository')
 const { badRequest, notFound } = require('../utils/httpError')
+const User = require('../models/User')
+
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
@@ -12,6 +14,9 @@ function toUserResponse(user) {
     fullName: user.fullName,
     email: user.email,
     role: user.role,
+    isVerified: user.isVerified,
+    isVerifiedRecruiter: user.isVerifiedRecruiter || false,
+    verificationStep: user.verificationStep || 'none'
   }
 }
 
@@ -22,7 +27,15 @@ async function register({ fullName, email, password, role }) {
   }
 
   const passwordHash = await bcrypt.hash(password, 10)
-  const user = await userRepository.createUser({ fullName, email, passwordHash, role })
+  
+  const user = await userRepository.createUser({ 
+    fullName, 
+    email, 
+    passwordHash, 
+    role,
+    verificationStep: role === 'recruiter' ? 'none' : 'approved' 
+  })
+  
   return toUserResponse(user)
 }
 
@@ -41,9 +54,17 @@ async function login({ email, password, role }) {
     throw badRequest('Sai loại tài khoản', 'ROLE_MISMATCH')
   }
 
-  const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, {
-    expiresIn: '7d',
-  })
+  // UPDATED JWT: Include verification flags so middleware can read them without DB queries
+  const token = jwt.sign(
+    { 
+      userId: user._id, 
+      role: user.role, 
+      isVerifiedRecruiter: user.isVerifiedRecruiter,
+      verificationStep: user.verificationStep 
+    }, 
+    process.env.JWT_SECRET, 
+    { expiresIn: '7d' }
+  )
 
   return { token, user: toUserResponse(user) }
 }
@@ -74,31 +95,67 @@ async function googleLogin({ idToken, role }) {
       idToken,
       audience: process.env.GOOGLE_CLIENT_ID,
     })
+
     const payload = ticket.getPayload()
     const { email, name, sub: googleId } = payload
 
-    let user = await userRepository.findByEmail(email)
+    const emailNormalized = email.toLowerCase().trim()
 
+    let user = await userRepository.findByEmail(emailNormalized)
+
+    // 🆕 First login
     if (!user) {
       if (!role) {
-        throw badRequest('Vui lòng chọn vai trò (Sinh viên/Nhà tuyển dụng) cho lần đăng nhập đầu tiên.', 'ROLE_REQUIRED')
+        throw badRequest(
+          'Vui lòng chọn vai trò cho lần đăng nhập đầu tiên.',
+          'ROLE_REQUIRED'
+        )
       }
-      // Create new user if not exists
+
       user = await userRepository.createUser({
         fullName: name,
-        email,
+        email: emailNormalized,
         role,
-        googleId, // Optional: save googleId for tracking
-        passwordHash: 'GOOGLE_OAUTH', // Placeholder for OAuth users
-        isVerified: true,
+        googleId,
+        passwordHash: 'GOOGLE_OAUTH',
+
+        isEmailVerified: true,
+        isVerified: false,
+        verificationStatus: role === 'recruiter' ? 'none' : 'approved'
       })
+    } 
+    else {
+      // 🚫 BLOCK ROLE SWITCHING
+      if (role && user.role !== role) {
+        throw badRequest(
+          'Bạn không thể thay đổi vai trò sau khi đã đăng ký.',
+          'ROLE_LOCKED'
+        )
+      }
+
+      // 🧠 Backward compatibility
+      if (user.role === 'recruiter' && user.isVerified === undefined) {
+        user.isVerified = false
+        user.verificationStatus = 'none'
+        await user.save()
+      }
     }
 
-    const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
-    })
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    )
 
-    return { token, user: toUserResponse(user) }
+    return {
+      token,
+      user: toUserResponse(user),
+
+      needsVerification:
+        user.role === 'recruiter' &&
+        user.verificationStatus !== 'approved'
+    }
+
   } catch (error) {
     console.error('Google Auth Error:', error)
     if (error.status === 400) throw error
