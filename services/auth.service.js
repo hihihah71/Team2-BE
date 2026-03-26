@@ -72,6 +72,11 @@ async function login({ email, password, role }) {
     throw badRequest('Sai loại tài khoản', 'ROLE_MISMATCH')
   }
 
+  const recruiterVerified =
+    typeof user.isVerifiedRecruiter === 'boolean'
+      ? user.isVerifiedRecruiter
+      : user.verificationStatus === 'approved'
+
   // UPDATED JWT: Include verification flags so middleware can read them without DB queries
   const token = jwt.sign(
     { 
