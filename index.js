@@ -17,7 +17,9 @@ const savedJobsRoutes = require('./routes/savedJobs.routes')
 const notificationsRoutes = require('./routes/notifications.routes')
 const adminRoutes = require('./routes/admin.routes')
 const aiRoutes = require('./routes/ai.routes')
+const reportsRoutes = require('./routes/reports.routes')
 const { mongoSanitize } = require('./middleware/security')
+const { createTextGuard } = require('./middleware/textGuard')
 
 
 
@@ -42,6 +44,7 @@ app.use(
     limit: '20mb',
   }),
 )
+app.use(createTextGuard())
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
@@ -57,6 +60,7 @@ app.use('/api/profile', profileRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/reports', reportsRoutes)
 app.use(errorHandler)
 
 const PORT = process.env.PORT || 3000

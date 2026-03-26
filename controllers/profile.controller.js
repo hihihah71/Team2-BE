@@ -10,4 +10,9 @@ async function saveMyProfile(req, res) {
   res.json(data)
 }
 
-module.exports = { getMyProfile, saveMyProfile }
+async function submitRecruiterVerificationRequest(req, res) {
+  const data = await profileService.submitRecruiterVerificationRequest(req.userId, req.body || {})
+  res.json(data)
+}
+
+module.exports = { getMyProfile, saveMyProfile, submitRecruiterVerificationRequest }

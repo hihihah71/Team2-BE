@@ -1,5 +1,5 @@
 const mongoose = require('mongoose')
-const { JOB_STATUSES } = require('../constants/domain')
+const { JOB_STATUSES, JOB_MODERATION_STATUSES } = require('../constants/domain')
 
 const jobSchema = new mongoose.Schema(
   {
@@ -7,6 +7,8 @@ const jobSchema = new mongoose.Schema(
     title: { type: String, required: true },
     company: { type: String, required: true },
     location: { type: String, default: '' },
+    phone: { type: String, default: '' },
+    imageUrl: { type: String, default: '' },
     description: { type: String, default: '' },
     requirements: { type: String, default: '' },
     jobType: { type: String, default: '' },
@@ -19,6 +21,12 @@ const jobSchema = new mongoose.Schema(
     salaryMax: { type: Number, default: null },
     deadline: { type: Date, default: null },
     detailViewCount: { type: Number, default: 0 },
+    reportCount: { type: Number, default: 0 },
+    moderationStatus: {
+      type: String,
+      enum: Object.values(JOB_MODERATION_STATUSES),
+      default: JOB_MODERATION_STATUSES.APPROVED,
+    },
     status: { type: String, enum: Object.values(JOB_STATUSES), default: JOB_STATUSES.OPEN },
   },
   { timestamps: true },

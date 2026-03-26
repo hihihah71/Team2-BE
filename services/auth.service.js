@@ -12,6 +12,13 @@ function toUserResponse(user) {
     fullName: user.fullName,
     email: user.email,
     role: user.role,
+    isVerified: !!user.isVerified,
+    isVerifiedRecruiter: !!user.isVerifiedRecruiter,
+    verificationRequestNote: user.verificationRequestNote || '',
+    verificationEvidenceImages: user.verificationEvidenceImages || [],
+    verificationRequestedAt: user.verificationRequestedAt || null,
+    verificationRejectReason: user.verificationRejectReason || '',
+    isBanned: !!user.isBanned,
   }
 }
 
@@ -31,13 +38,21 @@ async function login({ email, password, role }) {
   if (!user) {
     throw badRequest('Sai email hoặc mật khẩu', 'INVALID_CREDENTIALS')
   }
+  if (user.isBanned) {
+    throw badRequest('Tài khoản đã bị khóa bởi admin', 'USER_BANNED')
+  }
 
   const ok = await bcrypt.compare(password, user.passwordHash)
   if (!ok) {
     throw badRequest('Sai email hoặc mật khẩu', 'INVALID_CREDENTIALS')
   }
 
-  if (role && role !== user.role) {
+  const normalizedRole = String(role || '').trim().toLowerCase()
+  if (!normalizedRole) {
+    throw badRequest('Thiếu loại tài khoản', 'ROLE_REQUIRED')
+  }
+
+  if (normalizedRole !== user.role) {
     throw badRequest('Sai loại tài khoản', 'ROLE_MISMATCH')
   }
 
@@ -79,19 +94,26 @@ async function googleLogin({ idToken, role }) {
 
     let user = await userRepository.findByEmail(email)
 
+    const normalizedRole = String(role || '').trim().toLowerCase()
+
     if (!user) {
-      if (!role) {
+      if (!normalizedRole) {
         throw badRequest('Vui lòng chọn vai trò (Sinh viên/Nhà tuyển dụng) cho lần đăng nhập đầu tiên.', 'ROLE_REQUIRED')
       }
       // Create new user if not exists
       user = await userRepository.createUser({
         fullName: name,
         email,
-        role,
+        role: normalizedRole,
         googleId, // Optional: save googleId for tracking
         passwordHash: 'GOOGLE_OAUTH', // Placeholder for OAuth users
         isVerified: true,
       })
+    } else if (normalizedRole && normalizedRole !== user.role) {
+      throw badRequest('Sai loại tài khoản', 'ROLE_MISMATCH')
+    }
+    if (user.isBanned) {
+      throw badRequest('Tài khoản đã bị khóa bởi admin', 'USER_BANNED')
     }
 
     const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, {
