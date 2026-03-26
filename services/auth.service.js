@@ -90,6 +90,7 @@ async function googleLogin({ idToken, role }) {
         role,
         googleId, // Optional: save googleId for tracking
         passwordHash: 'GOOGLE_OAUTH', // Placeholder for OAuth users
+        isVerified: true,
       })
     }
 
@@ -105,4 +106,49 @@ async function googleLogin({ idToken, role }) {
   }
 }
 
-module.exports = { register, login, getMe, updateMe, googleLogin }
+async function requestVerification(userId) {
+  const user = await userRepository.findById(userId);
+  if (!user) throw notFound('Không tìm thấy người dùng');
+
+  // Rate limiting: 60 seconds
+  if (user.lastResendAt && Date.now() - new Date(user.lastResendAt).getTime() < 60000) {
+    throw badRequest('Vui lòng đợi 60 giây trước khi yêu cầu mã mới.');
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = new Date(Date.now() + 10 * 60000); // 10 minutes
+
+  await userRepository.updateById(userId, {
+    verificationCode: code,
+    verificationCodeExpires: expires,
+    lastResendAt: new Date(),
+  });
+
+  const emailService = require('./email.service');
+  await emailService.sendOTP(user.email, code);
+
+  return { message: 'Mã OTP đã được gửi đến email của bạn.' };
+}
+
+async function verifyAccount(userId, code) {
+  const user = await userRepository.findById(userId);
+  if (!user) throw notFound('Không tìm thấy người dùng');
+
+  if (!user.verificationCode || user.verificationCode !== code) {
+    throw badRequest('Mã OTP không chính xác.');
+  }
+
+  if (new Date(user.verificationCodeExpires) < new Date()) {
+    throw badRequest('Mã OTP đã hết hạn.');
+  }
+
+  await userRepository.updateById(userId, {
+    isVerified: true,
+    verificationCode: null,
+    verificationCodeExpires: null,
+  });
+
+  return { message: 'Tài khoản đã được xác thực thành công.', isVerified: true };
+}
+
+module.exports = { register, login, getMe, updateMe, googleLogin, requestVerification, verifyAccount }

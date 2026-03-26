@@ -8,6 +8,10 @@ function createUser(payload) {
   return User.create(payload)
 }
 
+function findById(id) {
+  return User.findById(id)
+}
+
 function findByIdWithoutPassword(id) {
   return User.findById(id).select('-passwordHash')
 }
