@@ -20,4 +20,9 @@ async function updateMe(req, res) {
   res.json(data)
 }
 
-module.exports = { register, login, me, updateMe }
+async function googleLogin(req, res) {
+  const data = await authService.googleLogin(req.body)
+  res.json(data)
+}
+
+module.exports = { register, login, me, updateMe, googleLogin }

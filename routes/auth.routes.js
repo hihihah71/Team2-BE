@@ -9,6 +9,7 @@ const router = express.Router()
 
 router.post('/register', validateBody(validateRegister), asyncHandler(authController.register))
 router.post('/login', validateBody(validateLogin), asyncHandler(authController.login))
+router.post('/google', asyncHandler(authController.googleLogin))
 router.get('/me', auth, asyncHandler(authController.me))
 router.put('/me', auth, asyncHandler(authController.updateMe))
 
