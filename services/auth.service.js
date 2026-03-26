@@ -3,15 +3,30 @@ const jwt = require('jsonwebtoken')
 const { OAuth2Client } = require('google-auth-library')
 const userRepository = require('../repositories/user.repository')
 const { badRequest, notFound } = require('../utils/httpError')
+const User = require('../models/User')
+
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 function toUserResponse(user) {
+  const recruiterVerified =
+    typeof user.isVerifiedRecruiter === 'boolean'
+      ? user.isVerifiedRecruiter
+      : user.verificationStatus === 'approved'
+
   return {
     id: user._id,
     fullName: user.fullName,
     email: user.email,
     role: user.role,
+    isVerified: !!user.isVerified,
+    isVerifiedRecruiter: !!recruiterVerified,
+    verificationRequestNote: user.verificationRequestNote || '',
+    verificationEvidenceImages: user.verificationEvidenceImages || [],
+    verificationRequestedAt: user.verificationRequestedAt || null,
+    verificationRejectReason: user.verificationRejectReason || '',
+    isBanned: !!user.isBanned,
+    verificationStep: user.verificationStep || user.verificationStatus || 'none',
   }
 }
 
@@ -22,7 +37,15 @@ async function register({ fullName, email, password, role }) {
   }
 
   const passwordHash = await bcrypt.hash(password, 10)
-  const user = await userRepository.createUser({ fullName, email, passwordHash, role })
+  
+  const user = await userRepository.createUser({ 
+    fullName, 
+    email, 
+    passwordHash, 
+    role,
+    verificationStatus: role === 'recruiter' ? 'none' : 'approved',
+  })
+  
   return toUserResponse(user)
 }
 
@@ -31,19 +54,35 @@ async function login({ email, password, role }) {
   if (!user) {
     throw badRequest('Sai email hoặc mật khẩu', 'INVALID_CREDENTIALS')
   }
+  if (user.isBanned) {
+    throw badRequest('Tài khoản đã bị khóa bởi admin', 'USER_BANNED')
+  }
 
   const ok = await bcrypt.compare(password, user.passwordHash)
   if (!ok) {
     throw badRequest('Sai email hoặc mật khẩu', 'INVALID_CREDENTIALS')
   }
 
-  if (role && role !== user.role) {
+  const normalizedRole = String(role || '').trim().toLowerCase()
+  if (!normalizedRole) {
+    throw badRequest('Thiếu loại tài khoản', 'ROLE_REQUIRED')
+  }
+
+  if (normalizedRole !== user.role) {
     throw badRequest('Sai loại tài khoản', 'ROLE_MISMATCH')
   }
 
-  const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, {
-    expiresIn: '7d',
-  })
+  // UPDATED JWT: Include verification flags so middleware can read them without DB queries
+  const token = jwt.sign(
+    { 
+      userId: user._id, 
+      role: user.role, 
+      isVerifiedRecruiter: recruiterVerified,
+      verificationStep: user.verificationStep || user.verificationStatus || 'none',
+    }, 
+    process.env.JWT_SECRET, 
+    { expiresIn: '7d' }
+  )
 
   return { token, user: toUserResponse(user) }
 }
@@ -74,31 +113,55 @@ async function googleLogin({ idToken, role }) {
       idToken,
       audience: process.env.GOOGLE_CLIENT_ID,
     })
+
     const payload = ticket.getPayload()
     const { email, name, sub: googleId } = payload
 
     let user = await userRepository.findByEmail(email)
 
+    const normalizedRole = String(role || '').trim().toLowerCase()
+
+    // 🆕 First login
     if (!user) {
-      if (!role) {
+      if (!normalizedRole) {
         throw badRequest('Vui lòng chọn vai trò (Sinh viên/Nhà tuyển dụng) cho lần đăng nhập đầu tiên.', 'ROLE_REQUIRED')
       }
-      // Create new user if not exists
+
       user = await userRepository.createUser({
         fullName: name,
         email,
-        role,
+        role: normalizedRole,
         googleId, // Optional: save googleId for tracking
         passwordHash: 'GOOGLE_OAUTH', // Placeholder for OAuth users
         isVerified: true,
+        verificationStatus: normalizedRole === 'recruiter' ? 'none' : 'approved',
       })
+    } else if (normalizedRole && normalizedRole !== user.role) {
+      throw badRequest('Sai loại tài khoản', 'ROLE_MISMATCH')
     }
 
-    const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
-    })
+    if (user.isBanned) {
+      throw badRequest('Tài khoản đã bị khóa bởi admin', 'USER_BANNED')
+    }
 
-    return { token, user: toUserResponse(user) }
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+
+    return {
+      token,
+      user: toUserResponse(user),
+
+      needsVerification:
+        user.role === 'recruiter' &&
+        !(
+          user.isVerifiedRecruiter === true ||
+          user.verificationStatus === 'approved'
+        ),
+    }
+
   } catch (error) {
     console.error('Google Auth Error:', error)
     if (error.status === 400) throw error

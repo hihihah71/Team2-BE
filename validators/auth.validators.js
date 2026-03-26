@@ -26,12 +26,15 @@ function validateRegister(body) {
 
 
 function validateLogin(body) {
-  if (!body.email || !body.password) {
-    return 'Thiếu email hoặc mật khẩu'
+  if (!body.email || !body.password || !body.role) {
+    return 'Thiếu email, mật khẩu hoặc loại tài khoản'
   }
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   if (!emailRegex.test(body.email)) {
     return 'Email không đúng định dạng'
+  }
+  if (!['student', 'recruiter', 'admin'].includes(String(body.role))) {
+    return 'Role không hợp lệ'
   }
   return null
 }

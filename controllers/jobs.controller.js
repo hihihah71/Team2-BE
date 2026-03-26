@@ -1,4 +1,6 @@
 const jobsService = require('../services/jobs.service')
+const User = require('../models/User')
+
 
 async function listJobs(req, res) {
   const data = await jobsService.listJobs(req.query)
@@ -15,7 +17,24 @@ async function getJob(req, res) {
   res.json(job)
 }
 
+
 async function createJob(req, res) {
+  const user = await User.findById(req.userId)
+
+  // 🚫 Not recruiter
+  if (user.role !== 'recruiter') {
+    return res.status(403).json({
+      message: 'Only recruiters can post jobs'
+    })
+  }
+
+  // 🚫 Not verified
+  if (user.verificationStatus !== 'approved') {
+    return res.status(403).json({
+      message: 'Account pending verification'
+    })
+  }
+
   const job = await jobsService.createJob(req.userId, req.body)
   res.status(201).json(job)
 }

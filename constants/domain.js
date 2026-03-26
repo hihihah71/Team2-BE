@@ -1,12 +1,24 @@
 const ROLES = {
   STUDENT: 'student',
   RECRUITER: 'recruiter',
+  ADMIN: 'admin',
 }
 
 const JOB_STATUSES = {
   DRAFT: 'draft',
   OPEN: 'open',
   CLOSED: 'closed',
+}
+
+const JOB_MODERATION_STATUSES = {
+  APPROVED: 'approved',
+  FLAGGED: 'flagged',
+  REJECTED: 'rejected',
+}
+
+const REPORT_STATUSES = {
+  PENDING: 'pending',
+  RESOLVED: 'resolved',
 }
 
 const APPLICATION_STATUSES = {
@@ -47,6 +59,8 @@ const APPLICATION_STATUS_FLOW = {
 module.exports = {
   ROLES,
   JOB_STATUSES,
+  JOB_MODERATION_STATUSES,
+  REPORT_STATUSES,
   APPLICATION_STATUSES,
   APPLICATION_STATUS_FLOW,
 }

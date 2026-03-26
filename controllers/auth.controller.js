@@ -64,4 +64,20 @@ async function verifyAccount(req, res, next) {
   }
 }
 
-module.exports = { register, login, me, updateMe, googleLogin, requestVerification, verifyAccount }
+
+async function forgotPassword(req, res) {
+  const { email } = req.body
+  console.log("Send reset email to:", email)
+
+  return res.json({ message: "Reset email sent (mock)" })
+}
+
+async function resetPassword(req, res) {
+  const { token, newPassword } = req.body
+
+  console.log("Reset password with token:", token)
+
+  return res.json({ message: "Password reset success (mock)" })
+}
+
+module.exports = { register, login, me, updateMe, googleLogin, requestVerification, verifyAccount, forgotPassword,resetPassword} 
