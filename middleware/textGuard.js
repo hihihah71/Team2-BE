@@ -1,7 +1,7 @@
 const { badRequest } = require('../utils/httpError')
 
 const DEFAULT_SKIP_KEY_PATTERN =
-  /(token|password|email|url|uri|link|base64|image|avatar|cover|otp|code|phone|jwt)/i
+  /(token|password|email|url|uri|link|base64|image|avatar|cover|otp|code|phone|jwt|targetId)/i
 
 const FIELD_RULES = [
   { pathPattern: /fullName|name$/i, maxWords: 8, maxWordLength: 20 },
