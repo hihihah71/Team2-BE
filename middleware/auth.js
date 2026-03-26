@@ -23,6 +23,7 @@ async function auth(req, res, next) {
     req.userId = decoded.userId
     // Always trust the current role in DB (not stale role inside old token payload).
     req.role = user.role
+    req.user = user
     next()
   } catch {
     return next(unauthorized('Token không hợp lệ hoặc đã hết hạn'))
@@ -43,18 +44,18 @@ function requireRole(...allowedRoles) {
 
 
 const requireVerifiedRecruiter = async (req, res, next) => {
-  if (req.userRole !== 'recruiter') {
-    return res.status(403).json({ message: "Only recruiters can perform this action." });
+  if (req.role !== 'recruiter') {
+    return next(forbidden('Chỉ nhà tuyển dụng mới có quyền thực hiện thao tác này'))
   }
 
-  if (!req.isVerifiedRecruiter) {
-    return res.status(403).json({ 
-      message: "Access Denied. Your recruiter account is pending admin approval.",
-      step: req.verificationStep 
-    });
+  const status = req.user?.verificationStatus || 'none'
+  if (status !== 'approved') {
+    return next(
+      forbidden(`Tài khoản nhà tuyển dụng chưa được duyệt (trạng thái: ${status})`),
+    )
   }
-  
-  next();
-};
+
+  return next()
+}
 
 module.exports = { auth, requireRole, requireVerifiedRecruiter }

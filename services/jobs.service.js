@@ -48,7 +48,7 @@ async function createJob(recruiterId, payload) {
   if (!recruiter || recruiter.role !== 'recruiter') {
     throw forbidden('Bạn không có quyền đăng bài tuyển dụng')
   }
-  if (!recruiter.isVerifiedRecruiter) {
+  if (recruiter.verificationStatus !== 'approved') {
     throw forbidden('Tài khoản recruiter chưa được admin duyệt')
   }
 

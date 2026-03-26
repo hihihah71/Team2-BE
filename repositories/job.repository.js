@@ -35,7 +35,7 @@ async function listPublicJobs({ page, limit, search, status, tags, location, sal
 
   const [items, total] = await Promise.all([
     Job.find(filter)
-      .populate('recruiterId', 'isVerifiedRecruiter')
+      .populate('recruiterId', 'verificationStatus')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
@@ -45,7 +45,7 @@ async function listPublicJobs({ page, limit, search, status, tags, location, sal
 
   const mapped = items.map(job => ({
     ...job,
-    isVerifiedRecruiter: job.recruiterId?.isVerifiedRecruiter || false,
+    isVerifiedRecruiter: job.recruiterId?.verificationStatus === 'approved',
     recruiterId: job.recruiterId?._id || job.recruiterId // Keep ID if populated, or fallback
   }))
 
@@ -54,7 +54,7 @@ async function listPublicJobs({ page, limit, search, status, tags, location, sal
 
 async function listRecruiterJobs(recruiterId) {
   const jobs = await Job.find({ recruiterId }).sort({ createdAt: -1 }).lean()
-  return jobs.map(j => ({ ...j, isVerifiedRecruiter: true })) // Recruiter's own jobs are "verified" to them or we can just omit
+  return jobs
 }
 
 function findByIdLean(id) {

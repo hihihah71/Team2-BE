@@ -19,8 +19,8 @@ async function getOverview() {
 
 function listRecruiters(status = 'pending') {
   const filter = { role: 'recruiter' }
-  if (status === 'approved') filter.isVerifiedRecruiter = true
-  if (status === 'pending') filter.isVerifiedRecruiter = false
+  if (status === 'approved') filter.verificationStatus = 'approved'
+  if (status === 'pending') filter.verificationStatus = { $in: ['none', 'pending', 'rejected'] }
   return User.find(filter).select('-passwordHash').sort({ createdAt: -1 }).lean()
 }
 
@@ -33,7 +33,7 @@ function listUsers(role) {
 async function approveRecruiter(userId) {
   const user = await User.findOneAndUpdate(
     { _id: userId, role: 'recruiter' },
-    { isVerifiedRecruiter: true, verificationRejectReason: '' },
+    { verificationStatus: 'approved', isVerified: true, verificationRejectReason: '' },
     { new: true },
   )
     .select('-passwordHash')
@@ -45,7 +45,7 @@ async function approveRecruiter(userId) {
 async function rejectRecruiter(userId, reason = '') {
   const user = await User.findOneAndUpdate(
     { _id: userId, role: 'recruiter' },
-    { isVerifiedRecruiter: false, verificationRejectReason: String(reason || '').trim() },
+    { verificationStatus: 'rejected', isVerified: false, verificationRejectReason: String(reason || '').trim() },
     { new: true },
   )
     .select('-passwordHash')

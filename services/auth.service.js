@@ -43,7 +43,6 @@ async function register({ fullName, email, password, role }) {
     email, 
     passwordHash, 
     role,
-    verificationStep: role === 'recruiter' ? 'none' : 'approved',
     verificationStatus: role === 'recruiter' ? 'none' : 'approved',
   })
   
@@ -78,8 +77,8 @@ async function login({ email, password, role }) {
     { 
       userId: user._id, 
       role: user.role, 
-      isVerifiedRecruiter: user.isVerifiedRecruiter,
-      verificationStep: user.verificationStep 
+      isVerifiedRecruiter: recruiterVerified,
+      verificationStep: user.verificationStep || user.verificationStatus || 'none',
     }, 
     process.env.JWT_SECRET, 
     { expiresIn: '7d' }
@@ -135,7 +134,6 @@ async function googleLogin({ idToken, role }) {
         googleId, // Optional: save googleId for tracking
         passwordHash: 'GOOGLE_OAUTH', // Placeholder for OAuth users
         isVerified: true,
-        verificationStep: normalizedRole === 'recruiter' ? 'none' : 'approved',
         verificationStatus: normalizedRole === 'recruiter' ? 'none' : 'approved',
       })
     } else if (normalizedRole && normalizedRole !== user.role) {
