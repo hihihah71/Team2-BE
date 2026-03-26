@@ -29,6 +29,7 @@ function findByIdLean(id) {
 module.exports = {
   findByEmail,
   createUser,
+  findById,
   findByIdWithoutPassword,
   updateById,
   findByIdLean,

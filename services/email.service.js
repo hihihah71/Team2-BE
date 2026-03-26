@@ -34,8 +34,12 @@ async function sendOTP(email, code) {
     console.log(`OTP sent to ${email}`);
     return true;
   } catch (error) {
-    console.error('Email send error:', error);
-    throw new Error('Không thể gửi email xác thực. Vui lòng thử lại sau.');
+    console.error('CRITICAL: Email send failed!');
+    console.error('Error details:', error.message);
+    if (error.code === 'EAUTH') {
+      console.error('CAUSE: Gmail login failed. You MUST use an "App Password", not your normal password.');
+    }
+    throw new Error(`Lỗi gửi mail: ${error.message}`);
   }
 }
 
