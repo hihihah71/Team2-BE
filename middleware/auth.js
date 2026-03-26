@@ -41,4 +41,20 @@ function requireRole(...allowedRoles) {
   }
 }
 
-module.exports = { auth, requireRole }
+
+const requireVerifiedRecruiter = async (req, res, next) => {
+  if (req.userRole !== 'recruiter') {
+    return res.status(403).json({ message: "Only recruiters can perform this action." });
+  }
+
+  if (!req.isVerifiedRecruiter) {
+    return res.status(403).json({ 
+      message: "Access Denied. Your recruiter account is pending admin approval.",
+      step: req.verificationStep 
+    });
+  }
+  
+  next();
+};
+
+module.exports = { auth, requireRole, requireVerifiedRecruiter }

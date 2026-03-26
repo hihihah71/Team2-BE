@@ -9,6 +9,8 @@ const router = express.Router()
 
 router.post('/register', validateBody(validateRegister), asyncHandler(authController.register))
 router.post('/login', validateBody(validateLogin), asyncHandler(authController.login))
+router.post('/forgot-password', asyncHandler(authController.forgotPassword))
+router.post('/reset-password', asyncHandler(authController.resetPassword))
 router.post('/google', asyncHandler(authController.googleLogin))
 router.get('/me', auth, authController.me)
 router.patch('/me', auth, authController.updateMe)

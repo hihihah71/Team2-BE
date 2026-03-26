@@ -3,22 +3,30 @@ const jwt = require('jsonwebtoken')
 const { OAuth2Client } = require('google-auth-library')
 const userRepository = require('../repositories/user.repository')
 const { badRequest, notFound } = require('../utils/httpError')
+const User = require('../models/User')
+
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 function toUserResponse(user) {
+  const recruiterVerified =
+    typeof user.isVerifiedRecruiter === 'boolean'
+      ? user.isVerifiedRecruiter
+      : user.verificationStatus === 'approved'
+
   return {
     id: user._id,
     fullName: user.fullName,
     email: user.email,
     role: user.role,
     isVerified: !!user.isVerified,
-    isVerifiedRecruiter: !!user.isVerifiedRecruiter,
+    isVerifiedRecruiter: !!recruiterVerified,
     verificationRequestNote: user.verificationRequestNote || '',
     verificationEvidenceImages: user.verificationEvidenceImages || [],
     verificationRequestedAt: user.verificationRequestedAt || null,
     verificationRejectReason: user.verificationRejectReason || '',
     isBanned: !!user.isBanned,
+    verificationStep: user.verificationStep || user.verificationStatus || 'none',
   }
 }
 
@@ -29,7 +37,16 @@ async function register({ fullName, email, password, role }) {
   }
 
   const passwordHash = await bcrypt.hash(password, 10)
-  const user = await userRepository.createUser({ fullName, email, passwordHash, role })
+  
+  const user = await userRepository.createUser({ 
+    fullName, 
+    email, 
+    passwordHash, 
+    role,
+    verificationStep: role === 'recruiter' ? 'none' : 'approved',
+    verificationStatus: role === 'recruiter' ? 'none' : 'approved',
+  })
+  
   return toUserResponse(user)
 }
 
@@ -56,9 +73,17 @@ async function login({ email, password, role }) {
     throw badRequest('Sai loại tài khoản', 'ROLE_MISMATCH')
   }
 
-  const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, {
-    expiresIn: '7d',
-  })
+  // UPDATED JWT: Include verification flags so middleware can read them without DB queries
+  const token = jwt.sign(
+    { 
+      userId: user._id, 
+      role: user.role, 
+      isVerifiedRecruiter: user.isVerifiedRecruiter,
+      verificationStep: user.verificationStep 
+    }, 
+    process.env.JWT_SECRET, 
+    { expiresIn: '7d' }
+  )
 
   return { token, user: toUserResponse(user) }
 }
@@ -89,6 +114,7 @@ async function googleLogin({ idToken, role }) {
       idToken,
       audience: process.env.GOOGLE_CLIENT_ID,
     })
+
     const payload = ticket.getPayload()
     const { email, name, sub: googleId } = payload
 
@@ -96,11 +122,12 @@ async function googleLogin({ idToken, role }) {
 
     const normalizedRole = String(role || '').trim().toLowerCase()
 
+    // 🆕 First login
     if (!user) {
       if (!normalizedRole) {
         throw badRequest('Vui lòng chọn vai trò (Sinh viên/Nhà tuyển dụng) cho lần đăng nhập đầu tiên.', 'ROLE_REQUIRED')
       }
-      // Create new user if not exists
+
       user = await userRepository.createUser({
         fullName: name,
         email,
@@ -108,19 +135,35 @@ async function googleLogin({ idToken, role }) {
         googleId, // Optional: save googleId for tracking
         passwordHash: 'GOOGLE_OAUTH', // Placeholder for OAuth users
         isVerified: true,
+        verificationStep: normalizedRole === 'recruiter' ? 'none' : 'approved',
+        verificationStatus: normalizedRole === 'recruiter' ? 'none' : 'approved',
       })
     } else if (normalizedRole && normalizedRole !== user.role) {
       throw badRequest('Sai loại tài khoản', 'ROLE_MISMATCH')
     }
+
     if (user.isBanned) {
       throw badRequest('Tài khoản đã bị khóa bởi admin', 'USER_BANNED')
     }
 
-    const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
-    })
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    )
 
-    return { token, user: toUserResponse(user) }
+    return {
+      token,
+      user: toUserResponse(user),
+
+      needsVerification:
+        user.role === 'recruiter' &&
+        !(
+          user.isVerifiedRecruiter === true ||
+          user.verificationStatus === 'approved'
+        ),
+    }
+
   } catch (error) {
     console.error('Google Auth Error:', error)
     if (error.status === 400) throw error
