@@ -1,4 +1,4 @@
-const Job = require('../models/Job')
+const Job = require('../models/job')
 const { JOB_STATUSES } = require('../constants/domain')
 
 async function listPublicJobs({ page, limit, search, status, tags, location, salaryMin }) {

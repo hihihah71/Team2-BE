@@ -1,4 +1,4 @@
-const Application = require('../models/Application')
+const Application = require('../models/application')
 
 async function listByApplicantId(applicantId) {
   return Application.find({ applicantId })
