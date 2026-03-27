@@ -2,8 +2,19 @@ const mongoose = require('mongoose')
 const jobRepository = require('../repositories/job.repository')
 const applicationRepository = require('../repositories/application.repository')
 const savedJobRepository = require('../repositories/savedJob.repository')
+const userRepository = require('../repositories/user.repository')
 const { JOB_STATUSES } = require('../constants/domain')
-const { notFound } = require('../utils/httpError')
+const { notFound, forbidden } = require('../utils/httpError')
+
+function normalizeString(value, fallback = '') {
+  if (value == null) return fallback
+  return String(value).trim()
+}
+
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) return []
+  return value.map((item) => String(item).trim()).filter(Boolean)
+}
 
 async function listJobs(query) {
   const parsed = { ...query }
@@ -33,19 +44,33 @@ async function getJobDetail(jobId) {
 }
 
 async function createJob(recruiterId, payload) {
+  const recruiter = await userRepository.findByIdLean(recruiterId)
+  if (!recruiter || recruiter.role !== 'recruiter') {
+    throw forbidden('Bạn không có quyền đăng bài tuyển dụng')
+  }
+  if (recruiter.verificationStatus !== 'approved') {
+    throw forbidden('Tài khoản recruiter chưa được admin duyệt')
+  }
+
   return jobRepository.create({
     recruiterId,
-    title: payload.title,
-    company: payload.company,
-    location: payload.location || '',
-    description: payload.description || '',
-    requirements: payload.requirements || '',
+    title: normalizeString(payload.title),
+    company: normalizeString(payload.company),
+    location: normalizeString(payload.location),
+    phone: normalizeString(payload.phone),
+    imageUrl: normalizeString(payload.imageUrl),
+    description: normalizeString(payload.description),
+    requirements: normalizeString(payload.requirements),
+    jobType: normalizeString(payload.jobType),
+    experienceLevel: normalizeString(payload.experienceLevel),
+    currency: normalizeString(payload.currency, 'VND') || 'VND',
+    skills: normalizeStringArray(payload.skills),
     experienceYears: payload.experienceYears ?? null,
     salaryMin: payload.salaryMin ?? null,
     salaryMax: payload.salaryMax ?? null,
     deadline: payload.deadline ? new Date(payload.deadline) : null,
     status: payload.status || JOB_STATUSES.OPEN,
-    tags: Array.isArray(payload.tags) ? payload.tags : [],
+    tags: normalizeStringArray(payload.tags),
   })
 }
 
@@ -59,8 +84,14 @@ async function updateJob(jobId, recruiterId, payload) {
     'title',
     'company',
     'location',
+    'phone',
+    'imageUrl',
     'description',
     'requirements',
+    'jobType',
+    'experienceLevel',
+    'currency',
+    'skills',
     'experienceYears',
     'salaryMin',
     'salaryMax',
@@ -72,6 +103,21 @@ async function updateJob(jobId, recruiterId, payload) {
   allowed.forEach((key) => {
     if (payload[key] !== undefined) {
       if (key === 'deadline') job[key] = payload[key] ? new Date(payload[key]) : null
+      else if (key === 'skills' || key === 'tags') job[key] = normalizeStringArray(payload[key])
+      else if (
+        key === 'title' ||
+        key === 'company' ||
+        key === 'location' ||
+        key === 'phone' ||
+        key === 'imageUrl' ||
+        key === 'description' ||
+        key === 'requirements' ||
+        key === 'jobType' ||
+        key === 'experienceLevel' ||
+        key === 'currency'
+      ) {
+        job[key] = normalizeString(payload[key])
+      }
       else job[key] = payload[key]
     }
   })

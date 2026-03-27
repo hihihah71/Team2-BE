@@ -9,14 +9,24 @@ const User = require('../models/User')
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 function toUserResponse(user) {
+  const recruiterVerified =
+    typeof user.isVerifiedRecruiter === 'boolean'
+      ? user.isVerifiedRecruiter
+      : user.verificationStatus === 'approved'
+
   return {
     id: user._id,
     fullName: user.fullName,
     email: user.email,
     role: user.role,
-    isVerified: user.isVerified,
-    isVerifiedRecruiter: user.isVerifiedRecruiter || false,
-    verificationStep: user.verificationStep || 'none'
+    isVerified: !!user.isVerified,
+    isVerifiedRecruiter: !!recruiterVerified,
+    verificationRequestNote: user.verificationRequestNote || '',
+    verificationEvidenceImages: user.verificationEvidenceImages || [],
+    verificationRequestedAt: user.verificationRequestedAt || null,
+    verificationRejectReason: user.verificationRejectReason || '',
+    isBanned: !!user.isBanned,
+    verificationStep: user.verificationStep || user.verificationStatus || 'none',
   }
 }
 
@@ -33,7 +43,7 @@ async function register({ fullName, email, password, role }) {
     email, 
     passwordHash, 
     role,
-    verificationStep: role === 'recruiter' ? 'none' : 'approved' 
+    verificationStatus: role === 'recruiter' ? 'none' : 'approved',
   })
   
   return toUserResponse(user)
@@ -44,23 +54,36 @@ async function login({ email, password, role }) {
   if (!user) {
     throw badRequest('Sai email hoặc mật khẩu', 'INVALID_CREDENTIALS')
   }
+  if (user.isBanned) {
+    throw badRequest('Tài khoản đã bị khóa bởi admin', 'USER_BANNED')
+  }
 
   const ok = await bcrypt.compare(password, user.passwordHash)
   if (!ok) {
     throw badRequest('Sai email hoặc mật khẩu', 'INVALID_CREDENTIALS')
   }
 
-  if (role && role !== user.role) {
+  const normalizedRole = String(role || '').trim().toLowerCase()
+  if (!normalizedRole) {
+    throw badRequest('Thiếu loại tài khoản', 'ROLE_REQUIRED')
+  }
+
+  if (normalizedRole !== user.role) {
     throw badRequest('Sai loại tài khoản', 'ROLE_MISMATCH')
   }
+
+  const recruiterVerified =
+    typeof user.isVerifiedRecruiter === 'boolean'
+      ? user.isVerifiedRecruiter
+      : user.verificationStatus === 'approved'
 
   // UPDATED JWT: Include verification flags so middleware can read them without DB queries
   const token = jwt.sign(
     { 
       userId: user._id, 
       role: user.role, 
-      isVerifiedRecruiter: user.isVerifiedRecruiter,
-      verificationStep: user.verificationStep 
+      isVerifiedRecruiter: recruiterVerified,
+      verificationStep: user.verificationStep || user.verificationStatus || 'none',
     }, 
     process.env.JWT_SECRET, 
     { expiresIn: '7d' }
@@ -99,50 +122,35 @@ async function googleLogin({ idToken, role }) {
     const payload = ticket.getPayload()
     const { email, name, sub: googleId } = payload
 
-    const emailNormalized = email.toLowerCase().trim()
+    let user = await userRepository.findByEmail(email)
 
-    let user = await userRepository.findByEmail(emailNormalized)
+    const normalizedRole = String(role || '').trim().toLowerCase()
 
     // 🆕 First login
     if (!user) {
-      if (!role) {
-        throw badRequest(
-          'Vui lòng chọn vai trò cho lần đăng nhập đầu tiên.',
-          'ROLE_REQUIRED'
-        )
+      if (!normalizedRole) {
+        throw badRequest('Vui lòng chọn vai trò (Sinh viên/Nhà tuyển dụng) cho lần đăng nhập đầu tiên.', 'ROLE_REQUIRED')
       }
 
       user = await userRepository.createUser({
         fullName: name,
-        email: emailNormalized,
-        role,
-        googleId,
-        passwordHash: 'GOOGLE_OAUTH',
-
-        isEmailVerified: true,
-        isVerified: false,
-        verificationStatus: role === 'recruiter' ? 'none' : 'approved'
+        email,
+        role: normalizedRole,
+        googleId, // Optional: save googleId for tracking
+        passwordHash: 'GOOGLE_OAUTH', // Placeholder for OAuth users
+        isVerified: true,
+        verificationStatus: normalizedRole === 'recruiter' ? 'none' : 'approved',
       })
-    } 
-    else {
-      // 🚫 BLOCK ROLE SWITCHING
-      if (role && user.role !== role) {
-        throw badRequest(
-          'Bạn không thể thay đổi vai trò sau khi đã đăng ký.',
-          'ROLE_LOCKED'
-        )
-      }
+    } else if (normalizedRole && normalizedRole !== user.role) {
+      throw badRequest('Sai loại tài khoản', 'ROLE_MISMATCH')
+    }
 
-      // 🧠 Backward compatibility
-      if (user.role === 'recruiter' && user.isVerified === undefined) {
-        user.isVerified = false
-        user.verificationStatus = 'none'
-        await user.save()
-      }
+    if (user.isBanned) {
+      throw badRequest('Tài khoản đã bị khóa bởi admin', 'USER_BANNED')
     }
 
     const token = jwt.sign(
-      { userId: user._id },
+      { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )
@@ -153,7 +161,10 @@ async function googleLogin({ idToken, role }) {
 
       needsVerification:
         user.role === 'recruiter' &&
-        user.verificationStatus !== 'approved'
+        !(
+          user.isVerifiedRecruiter === true ||
+          user.verificationStatus === 'approved'
+        ),
     }
 
   } catch (error) {

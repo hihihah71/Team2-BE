@@ -1,10 +1,12 @@
-const Job = require('../models/job')
-const { JOB_STATUSES } = require('../constants/domain')
+
+const Job = require('../models/Job')
+const { JOB_STATUSES, JOB_MODERATION_STATUSES } = require('../constants/domain')
 
 async function listPublicJobs({ page, limit, search, status, tags, location, salaryMin }) {
   const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 12))
   const skip = (Math.max(1, parseInt(page, 10) || 1) - 1) * limitNum
   const filter = { status: status || JOB_STATUSES.OPEN }
+  filter.moderationStatus = { $ne: JOB_MODERATION_STATUSES.REJECTED }
 
   const escapeRegex = (str) => String(str).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -34,7 +36,7 @@ async function listPublicJobs({ page, limit, search, status, tags, location, sal
 
   const [items, total] = await Promise.all([
     Job.find(filter)
-      .populate('recruiterId', 'isVerifiedRecruiter')
+      .populate('recruiterId', 'verificationStatus')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
@@ -44,7 +46,7 @@ async function listPublicJobs({ page, limit, search, status, tags, location, sal
 
   const mapped = items.map(job => ({
     ...job,
-    isVerifiedRecruiter: job.recruiterId?.isVerifiedRecruiter || false,
+    isVerifiedRecruiter: job.recruiterId?.verificationStatus === 'approved',
     recruiterId: job.recruiterId?._id || job.recruiterId // Keep ID if populated, or fallback
   }))
 
@@ -53,7 +55,7 @@ async function listPublicJobs({ page, limit, search, status, tags, location, sal
 
 async function listRecruiterJobs(recruiterId) {
   const jobs = await Job.find({ recruiterId }).sort({ createdAt: -1 }).lean()
-  return jobs.map(j => ({ ...j, isVerifiedRecruiter: true })) // Recruiter's own jobs are "verified" to them or we can just omit
+  return jobs
 }
 
 function findByIdLean(id) {
@@ -76,6 +78,10 @@ function create(payload) {
   return Job.create(payload)
 }
 
+function updateById(id, update) {
+  return Job.findByIdAndUpdate(id, update, { new: true })
+}
+
 function findOneAndDeleteOwned(id, recruiterId) {
   return Job.findOneAndDelete({ _id: id, recruiterId })
 }
@@ -91,6 +97,7 @@ module.exports = {
   findOwnedByRecruiter,
   incrementDetailViewCount,
   create,
+  updateById,
   findOneAndDeleteOwned,
   deleteMany,
 }

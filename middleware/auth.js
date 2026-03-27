@@ -1,10 +1,11 @@
 const jwt = require('jsonwebtoken')
 const { unauthorized, forbidden } = require('../utils/httpError')
+const userRepository = require('../repositories/user.repository')
 
 /**
  * Xác thực JWT, gắn req.user (id, role). Dùng cho route cần đăng nhập.
  */
-function auth(req, res, next) {
+async function auth(req, res, next) {
   const authHeader = req.headers.authorization
   const tokenFromHeader = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
   const tokenFromQuery = typeof req.query.token === 'string' ? req.query.token : null
@@ -16,8 +17,13 @@ function auth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const user = await userRepository.findByIdLean(decoded.userId)
+    if (!user) return next(unauthorized('Người dùng không tồn tại'))
+    if (user.isBanned) return next(forbidden('Tài khoản đã bị khóa bởi admin'))
     req.userId = decoded.userId
-    req.role = decoded.role
+    // Always trust the current role in DB (not stale role inside old token payload).
+    req.role = user.role
+    req.user = user
     next()
   } catch {
     return next(unauthorized('Token không hợp lệ hoặc đã hết hạn'))
@@ -38,18 +44,18 @@ function requireRole(...allowedRoles) {
 
 
 const requireVerifiedRecruiter = async (req, res, next) => {
-  if (req.userRole !== 'recruiter') {
-    return res.status(403).json({ message: "Only recruiters can perform this action." });
+  if (req.role !== 'recruiter') {
+    return next(forbidden('Chỉ nhà tuyển dụng mới có quyền thực hiện thao tác này'))
   }
 
-  if (!req.isVerifiedRecruiter) {
-    return res.status(403).json({ 
-      message: "Access Denied. Your recruiter account is pending admin approval.",
-      step: req.verificationStep 
-    });
+  const status = req.user?.verificationStatus || 'none'
+  if (status !== 'approved') {
+    return next(
+      forbidden(`Tài khoản nhà tuyển dụng chưa được duyệt (trạng thái: ${status})`),
+    )
   }
-  
-  next();
-};
+
+  return next()
+}
 
 module.exports = { auth, requireRole, requireVerifiedRecruiter }
