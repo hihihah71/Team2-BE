@@ -54,4 +54,4 @@ applicationSchema.index({ jobId: 1, applicantId: 1 }, { unique: true })
 applicationSchema.index({ applicantId: 1, createdAt: -1 })
 applicationSchema.index({ jobId: 1, status: 1 })
 
-module.exports = mongoose.model('Application', applicationSchema)
+module.exports = mongoose.models.Application || mongoose.model('Application', applicationSchema)

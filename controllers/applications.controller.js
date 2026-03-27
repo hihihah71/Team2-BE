@@ -1,4 +1,4 @@
-const Application = require('../models/Application');
+const Application = require('../models/application');
 const applicationsService = require('../services/applications.service')
 
 async function getMyApplications(req, res) {
